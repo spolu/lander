@@ -64,7 +64,7 @@ func Create(mungeRequest func(*http.Request)) (*httptest.Server, error) {
 			if err != nil {
 				panic(fmt.Errorf("error writing unmatched_request: %v", err))
 			}
-			panic(fmt.Errorf("umatched request dumped"))
+			panic(fmt.Errorf("umatched request dumped: %q", r.URL))
 		}))
 
 	return ts, nil
@@ -98,7 +98,7 @@ func getResponses() (map[string]*http.Response, error) {
 	for _, dir := range dirs {
 		inReq, err := os.Open(path.Join(dir, requestFn))
 		if err != nil {
-			return nil, fmt.Errorf("error opening input %q: %v", dir, err)
+			continue
 		}
 		req, err := http.ReadRequest(bufio.NewReader(inReq))
 		if err != nil {
@@ -111,7 +111,7 @@ func getResponses() (map[string]*http.Response, error) {
 
 		inRes, err := os.Open(path.Join(dir, responseFn))
 		if err != nil {
-			return nil, fmt.Errorf("error opening input %q: %v", dir, err)
+			continue
 		}
 		res, err := http.ReadResponse(bufio.NewReader(inRes), req)
 		if err != nil {
