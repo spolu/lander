@@ -32,10 +32,11 @@ func Create(suffix string, munge func(*http.Request)) (*httptest.Server, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch responses: %v", err)
 	}
-	absPath, _ := filepath.Abs(Path)
+	p := Path
 	if suffix != "" {
-		absPath = filepath.Join(absPath, suffix)
+		p = p + "-" + suffix
 	}
+	absPath, _ := filepath.Abs(p)
 
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -81,10 +82,11 @@ func getResponses(suffix string) (map[string]*http.Response, error) {
 	var dirs []string
 	responses := map[string]*http.Response{}
 
-	absPath, _ := filepath.Abs(Path)
+	p := Path
 	if suffix != "" {
-		absPath = filepath.Join(absPath, suffix)
+		p = p + "-" + suffix
 	}
+	absPath, _ := filepath.Abs(p)
 
 	fis, err := ioutil.ReadDir(absPath)
 	if err != nil {
