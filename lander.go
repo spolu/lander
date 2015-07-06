@@ -27,7 +27,10 @@ var Path = "lander"
 // Create is the main method for lander: it creates an httptest.Server matching
 // received request to precomputed responses. It also takes as argument a
 // function that is called on every request.
-func Create(suffix string, munge func(*http.Request)) (*httptest.Server, error) {
+func Create(
+	suffix string,
+	munge func(*http.Request, *http.Response),
+) (*httptest.Server, error) {
 	responses, err := getResponses(suffix)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch responses: %v", err)
@@ -40,7 +43,6 @@ func Create(suffix string, munge func(*http.Request)) (*httptest.Server, error) 
 
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			munge(r)
 			err = rewindRequest(r)
 			if err != nil {
 				panic(err)
@@ -51,6 +53,7 @@ func Create(suffix string, munge func(*http.Request)) (*httptest.Server, error) 
 					r.URL.String() == resp.Request.URL.String() &&
 					r.Body.(*body).String() ==
 						(resp.Request.Body).(*body).String() {
+					munge(r, resp)
 					w.WriteHeader(resp.StatusCode)
 					for h, v := range resp.Header {
 						w.Header().Add(h, v[0])
@@ -78,7 +81,9 @@ func Create(suffix string, munge func(*http.Request)) (*httptest.Server, error) 
 // getResponses retrieves the existing request responses pairs and construts
 // responses objects. The responses objects have a reference to the associated
 // request to which it should be matched.
-func getResponses(suffix string) (map[string]*http.Response, error) {
+func getResponses(
+	suffix string,
+) (map[string]*http.Response, error) {
 	var dirs []string
 	responses := map[string]*http.Response{}
 
