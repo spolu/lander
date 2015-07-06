@@ -27,15 +27,19 @@ var Path = "lander"
 // Create is the main method for lander: it creates an httptest.Server matching
 // received request to precomputed responses. It also takes as argument a
 // function that is called on every request.
-func Create(mungeRequest func(*http.Request)) (*httptest.Server, error) {
-	responses, err := getResponses()
+func Create(suffix string, munge func(*http.Request)) (*httptest.Server, error) {
+	responses, err := getResponses(suffix)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch responses: %v", err)
 	}
 	absPath, _ := filepath.Abs(Path)
+	if suffix != "" {
+		absPath = filepath.Join(absPath, suffix)
+	}
 
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			munge(r)
 			err = rewindRequest(r)
 			if err != nil {
 				panic(err)
@@ -73,11 +77,14 @@ func Create(mungeRequest func(*http.Request)) (*httptest.Server, error) {
 // getResponses retrieves the existing request responses pairs and construts
 // responses objects. The responses objects have a reference to the associated
 // request to which it should be matched.
-func getResponses() (map[string]*http.Response, error) {
+func getResponses(suffix string) (map[string]*http.Response, error) {
 	var dirs []string
 	responses := map[string]*http.Response{}
 
 	absPath, _ := filepath.Abs(Path)
+	if suffix != "" {
+		absPath = filepath.Join(absPath, suffix)
+	}
 
 	fis, err := ioutil.ReadDir(absPath)
 	if err != nil {
