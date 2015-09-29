@@ -55,10 +55,10 @@ func Create(
 						(resp.Request.Body).(*body).String() {
 					//log.Printf("BODY: %s\n", (resp.Body).(*body).String())
 					munge(r, resp)
-					w.WriteHeader(resp.StatusCode)
 					for h, v := range resp.Header {
 						w.Header().Add(h, v[0])
 					}
+					w.WriteHeader(resp.StatusCode)
 					io.Copy(w, resp.Body)
 					(resp.Body).(*body).Rewind()
 					return
