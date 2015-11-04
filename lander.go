@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -49,11 +50,40 @@ func Create(
 			}
 
 			for _, resp := range responses {
+				actual := r.Body.(*body).String()
+				expected := (resp.Request.Body).(*body).String()
+
+				bodiesMatch := actual == expected
+
+				// If body contains backticks, assume we want a regex match.
+				regexpMatch := strings.Index(expected, "`") >= 0
+				if regexpMatch {
+					backtickRegex := regexp.MustCompile("`[^`]*`")
+					// Find all sequences that we don't want to escape.
+					matches := backtickRegex.FindAllString(expected, -1)
+					// Replace what used to be in those sequences with an empty string.
+					// A string like "abc`.+`def" then becomes "abc``def"
+					withoutRegexes := backtickRegex.ReplaceAllLiteralString(expected, "``")
+					// Quote all regex meta characters.
+					withoutRegexesQuoted := regexp.QuoteMeta(withoutRegexes)
+					// Substitute back in each unescaped sequences between the backticks.
+					i := 0
+					withRegexesQuoted := backtickRegex.ReplaceAllStringFunc(
+						withoutRegexesQuoted,
+						func(_ string) string {
+							// The match includes the backticks, strip those out.
+							match := matches[i][1 : len(matches[i])-1]
+							i++
+							return match
+						},
+					)
+					bodiesMatch = regexp.MustCompile(withRegexesQuoted).Match([]byte(actual))
+				}
+
 				if r.Method == resp.Request.Method &&
 					r.URL.String() == resp.Request.URL.String() &&
-					r.Body.(*body).String() ==
-						(resp.Request.Body).(*body).String() {
-					//log.Printf("BODY: %s\n", (resp.Body).(*body).String())
+					bodiesMatch {
+
 					munge(r, resp)
 					for h, v := range resp.Header {
 						w.Header().Add(h, v[0])
